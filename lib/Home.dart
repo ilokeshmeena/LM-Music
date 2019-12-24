@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:youtube_extractor/youtube_extractor.dart';
 import 'dart:io';
@@ -19,7 +20,7 @@ class _HomeState extends State<Home> {
   final iconColour=Colors.white;
   var searchKeyword="mankrit",searchResults,searchResultsVideo,musicLink,videoThumbnail;
   bool isSearching=false,isPlaying=false;
-  var isInternetAvailable,isInternet=false;
+//  var isInternetAvailable,isInternet=false;
 
   void fetchSearchResults() async
   {
@@ -34,25 +35,36 @@ class _HomeState extends State<Home> {
 
    });
   }
-  void isInernetWorking() async{
-      isInternetAvailable= await InternetAddress.lookup('google.com');
-      if (isInternetAvailable.isNotEmpty && isInternetAvailable[0].rawAddress.isNotEmpty) {
-        isInternet=true;
-        fetchSearchResults();
-      }
-    else{
-      isInternet=false;
-    }
-    setState(() {
-    });
+
+
+  @override
+  void deactivate() {
+    audioPlayer.stop();
   }
+
+  @override
+  void dispose() {
+    super.dispose();
+    audioPlayer.stop();
+  } //  void isInernetWorking() async{
+//      isInternetAvailable= await InternetAddress.lookup('google.com');
+//      if (isInternetAvailable.isNotEmpty && isInternetAvailable[0].rawAddress.isNotEmpty) {
+//        isInternet=true;
+//        fetchSearchResults();
+//      }
+//    else{
+//      isInternet=false;
+//    }
+//    setState(() {
+//    });
+//  }
 
 
 
   @override
   void initState() {
     super.initState();
-    isInernetWorking();
+    fetchSearchResults();
   }
 
   void getMusicLink (String videoId)async{
@@ -80,6 +92,7 @@ class _HomeState extends State<Home> {
           child:!isSearching? Text("LM Music",textAlign: TextAlign.center,style: TextStyle(
             color: Colors.black,
           ),):TextFormField(
+
             autocorrect: false,
             autofocus: true,
             onChanged: (newText){
@@ -165,8 +178,7 @@ class _HomeState extends State<Home> {
                     SizedBox(
                       height: 50,
                     ),
-                    (isInternet==true)?
-                    Text("Searching for your song"):Text("No internet connection available"),
+                    Text("Searching for your song"),
                   ],
                 ),
                 ),
@@ -176,7 +188,7 @@ class _HomeState extends State<Home> {
             Positioned(
               bottom: 0,
               height: 60,
-              width: 400,
+              width: MediaQuery.of(context).size.width,
               child: Container(
                 decoration: BoxDecoration(
                     gradient: LinearGradient(
