@@ -4,6 +4,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:youtube_extractor/youtube_extractor.dart';
+import 'dart:io';
 
 class Home extends StatefulWidget{
   @override
@@ -12,12 +13,14 @@ class Home extends StatefulWidget{
 
 class _HomeState extends State<Home> {
   var musicList=[],current_index;
-  int Isplaying,Ispause;
+  var currentPage=0;
   AudioPlayer audioPlayer = AudioPlayer();
   var extractor = YouTubeExtractor();
   final iconColour=Colors.white;
-  var searchKeyword="Dj+Snake",previousSearchKeyword,searchResults,searchResultsVideo,musicLink,videoThumbnail;
+  var searchKeyword="mankrit",searchResults,searchResultsVideo,musicLink,videoThumbnail;
   bool isSearching=false,isPlaying=false;
+  var isInternetAvailable,isInternet=false;
+
   void fetchSearchResults() async
   {
    searchResults=await http.get("https://api.w3hills.com/youtube/search?keyword=${searchKeyword}&api_key=0B309769-259B-E40C-0D0E-6DAB2354C322");
@@ -31,14 +34,41 @@ class _HomeState extends State<Home> {
 
    });
   }
+  void isInernetWorking() async{
+      isInternetAvailable= await InternetAddress.lookup('google.com');
+      if (isInternetAvailable.isNotEmpty && isInternetAvailable[0].rawAddress.isNotEmpty) {
+        isInternet=true;
+        fetchSearchResults();
+      }
+    else{
+      isInternet=false;
+    }
+    setState(() {
+    });
+  }
+
+
+
+  @override
+  void initState() {
+    super.initState();
+    isInernetWorking();
+  }
+
   void getMusicLink (String videoId)async{
+
     var streamInfo = await extractor.getMediaStreamsAsync(videoId);
     videoThumbnail="https:\/\/img.youtube.com\/vi\/${videoId}\/mqdefault.jpg";
     musicLink=streamInfo.audio.first.url;
     setState(() {
 
     });
-    play();
+//    var result=
+    await audioPlayer.play(musicLink);
+//    if(result!=1){
+//      isReady=true;
+//    }
+//    play();
   }
   @override
   Widget build(BuildContext context) {
@@ -76,6 +106,10 @@ class _HomeState extends State<Home> {
                   isSearching=!isSearching;
                 });
               }else{
+                  setState(() {
+                    searchResultsVideo=null;
+                    musicList.removeRange(0, musicList.length);
+                  });
                   fetchSearchResults();
                   setState(() {
                   isSearching=!isSearching;
@@ -86,7 +120,7 @@ class _HomeState extends State<Home> {
         ],
       ),
       drawer: !isSearching?Drawer():null,
-      body: Container(
+      body: (currentPage==0)?Container(
         child: Stack(
           children: <Widget>[
             Positioned(
@@ -116,7 +150,7 @@ class _HomeState extends State<Home> {
                           current_index=index;
                           getMusicLink(videoData["id"]);
                             setState(() {
-                              isPlaying=false;
+                              isPlaying=true;
                             });
 
                         },
@@ -124,7 +158,17 @@ class _HomeState extends State<Home> {
                     );
                   },)
                 ):Container(
-                child: CircularProgressIndicator(),
+                child:Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    CircularProgressIndicator(),
+                    SizedBox(
+                      height: 50,
+                    ),
+                    (isInternet==true)?
+                    Text("Searching for your song"):Text("No internet connection available"),
+                  ],
+                ),
                 ),
               ),
             ),
@@ -154,20 +198,27 @@ class _HomeState extends State<Home> {
                         IconButton(
                           icon: Icon(Icons.chevron_left,size: 40,color: iconColour),
                           onPressed: (){
-                            setState(() {
-                              current_index=current_index-1;
-                            });
                             audioPlayer.stop();
-                            if(current_index>=0) {
-                              getMusicLink(musicList[current_index]);
+                            if(current_index>0){
+                              setState(() {
+                                current_index=current_index-1;
+                                getMusicLink(musicList[current_index]);
+                              });
+                            }else{
+                              setState(() {
+                                current_index=musicList.length-1;
+                                getMusicLink(musicList[current_index]);
+                              });
+
                             }
                           },
                         ),
+//                        isReady?
                         IconButton(
-                          icon: Icon(isPlaying?Icons.play_arrow:Icons.pause,size: 40,color: iconColour),
+                          icon:Icon(!isPlaying?Icons.play_arrow:Icons.pause,size: 40,color: iconColour),
                           onPressed: (){
 
-                            if(!isPlaying){
+                            if(isPlaying){
                               setState(() {
                                 audioPlayer.pause();
                                 isPlaying=!isPlaying;
@@ -186,17 +237,16 @@ class _HomeState extends State<Home> {
                             }
                           },
                         ),
+//                            :CircularProgressIndicator(),
                         IconButton(
                           icon: Icon(Icons.chevron_right,size: 40,color: iconColour,),
                           onPressed: (){
-
+                            audioPlayer.stop();
                             setState(() {
                               current_index=current_index+1;
                             });
-                            audioPlayer.stop();
-                            if(current_index<=musicList.length){
                               getMusicLink(musicList[current_index]);
-                            }
+
                           },
                         ),
                       ],
@@ -214,16 +264,16 @@ class _HomeState extends State<Home> {
 //            )
           ],
         ),
-      ),
+      ):(currentPage=1),
     );
   }
-  play() async{
-
-    Isplaying = await audioPlayer.play(musicLink);
-    if (Isplaying == 1) {
-      setState(() {
-          isPlaying=false;
-      });
-    }
-  }
+//  play() async{
+//
+//    Isplaying = await audioPlayer.play(musicLink);
+//    if (Isplaying == 1) {
+//      setState(() {
+//          isPlaying=false;
+//      });
+//    }
+//  }
 }
